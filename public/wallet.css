@@ -1,0 +1,94 @@
+input:invalid,
+input:invalid:focus {
+    border: 1px solid #f00;
+    background-color: rgba(255,0,0,0.03);
+}
+input:read-only {
+    background-color: rgba(0,0,0,0.02);
+}
+.text-button {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+    letter-spacing: .1rem;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    margin-top: .5rem;
+    cursor: pointer;
+}
+.button,
+input[type=button] {
+    background-color: #fff;
+}
+.button-combo {
+    font-size: 0;
+}
+input[type=button].button-action-left {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-right: 0;
+    padding: 0 25px;
+    width: 75%;
+}
+input[type=button].button-option-right {
+    border-left: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: 0;
+    padding: 0 5px;
+    width: 25%;
+}
+
+ul.button-options {
+    display: none;
+    background-color: #fff;
+    border-radius: 4px;
+    list-style: none;
+    margin: -10px;
+    padding: 0;
+    font: 600 11px 'Raleway', sans-serif;
+    position: absolute;
+    color: #333;
+    box-shadow: 0 0 15px 0 rgba(0, 0, 0, 0.2);
+}
+ul.button-options.show {
+    display: block;
+}
+ul.button-options li{
+    cursor: pointer;
+    margin: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    padding: 10px 15px;
+    border-bottom:1px solid #ecf0f1;
+}
+ul.button-options li:hover{
+    background-color: #ecf0f1;
+}
+ul.button-options li:last-child{
+    border-bottom: none;
+}
+
+p:last-child {
+    margin-bottom: 1.5rem;
+}
+
+table {
+    min-width: 100%;
+}
+
+.u-hidden {
+    display: none;
+}
+.u-inline {
+    display: inline;
+}
+.amt-positive {
+    color: green;
+}
+.u-warn,
+.amt-negative {
+    color: red;
+}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>cruzbit Web Wallet</title>
+    <meta name="description" content="Manage your cruzbit wallet from your web browser">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css?family=Raleway:400,300,600" rel="stylesheet" type="text/css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
+    <link rel="stylesheet" href="https://cruzb.it/css/skeleton.css">
+    <link rel="stylesheet" href="https://cruzb.it/css/custom.css">
+    <link rel="stylesheet" href="wallet.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script>
+    <script src="lib/nacl-fast.min.js"></script><!-- TweetNaCl (JavaScript): https://tweetnacl.js.org/ -->
+    <script src="lib/nacl-util.min.js"></script><!-- https://github.com/dchest/tweetnacl-util-js -->
+    <script src="lib/sha3.min.js"></script><!-- https://github.com/emn178/js-sha3 -->
+    <script src="wallet.js"></script>
+    <link rel="icon" type="image/png" href="/favicon.ico">
+</head>
+<body>
+
+    <div class="container">
+        <section class="header">
+            <h3 class="title">cruzbit Web Wallet.</h3>
+            <noscript><p><b>NOTICE: Hash Roulette requires JavaScript to be enabled in order to connect to the cruzbit network.</b></p></noscript>
+        </section>
+
+        <section id="wallet">
+            <div id="wallet-update">
+                <div class="row">
+                    <div class="twelve columns">
+                        <p>Enter your public key, or use your private key to send a transaction. <b>Your private key is not sent over the Internet.</b></p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="ten columns">
+                        <label for="wallet-key">Public or Private Key:</label>
+                        <input class="u-full-width" id="wallet-key" type="password" value="" pattern="([A-za-z0-9/\+]{43}=)|([A-za-z0-9/\+]{86}==)" title="Cruzbit wallet private key (88 characters with letters, numbers, forward slash and plus symbols; ends with two equals symbols)">
+                    </div>
+                    <div class="two columns">
+                        <label for="wallet-key-update">&nbsp;</label>
+                        <input class="u-full-width button-primary" id="wallet-key-update" type="button" value="Update">
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="wallet-info" class="u-hidden">
+                <div class="row">
+                    <div class="seven columns">
+                        <p><b>Wallet:</b> <a id="wallet-pubkey" href=""></a></p>
+                    </div>
+                    <div class="three columns">
+                        <b>Balance:</b> <span id="wallet-balance">unknown</span>
+                    </div>
+                    <div class="two columns text-button">
+                        <a id="wallet-key-change">Change</a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="wallet-send" class="u-hidden">
+                <h5>Send CRUZ</h5>
+                <div class="row">
+                    <div class="eight columns">
+                        <input class="u-full-width" id="wallet-recipient" type="text" value="" pattern="[A-Za-z0-9/\+]{43}=" title="Recipient address" placeholder="Recipient Address">
+                    </div>
+                    <div class="four columns">
+                        <input class="u-full-width" id="wallet-amount" type="number" min="1" step="0.00000001" placeholder="Amount">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="ten columns">
+                        <input class="u-full-width" id="wallet-memo" type="text" value="" title="Transaction memo" maxlength="100" placeholder="Transaction Memo (optional)">
+                    </div>
+                    <div class="two columns button-combo">
+                        <input class="button-primary button-action-left" id="wallet-submit" type="button" value="Send">
+                        <input class="button-primary button-option-right" id="wallet-option" type="button" value="&#9660;" aria-haspopup="true" aria-expanded="false">
+                        <ul class="button-options" id="wallet-send-options" role="menu">
+                            <li id="option-generate-tx">Generate Transaction</li>
+                            <li id="option-generate-mx">Generate Message</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="u-threequarter-width">
+
+            <div id="wallet-ledger" class="u-hidden">
+                <h5>Pending Transactions</h5>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Sender/Recipient</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody id="wallet-transactions-pending">
+                    <tr class="no-results">
+                        <td colspan="3">No pending transactions.</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <h5>Confirmed Transactions</h5>
+                <p>Shows the last 10 confirmed transactions associated with this public key.</p>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Sender/Recipient</th>
+                        <th>Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody id="wallet-transactions-confirmed">
+                    <tr class="no-results">
+                        <td colspan="3">No transactions found.</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
+        <div class="docs-section" id="intro">
+            <h6 class="docs-header">Introduction</h6>
+            <p>This is a full-featured cruzbit wallet that runs completely inside your web browser. You can use it to track your balance, view history, and to send and receive transactions.</p>
+            <p><b>Is this secure?</b> The wallet requires access to either your public key or your private key in order to function. Using your private key enables signing and sending transactions. Anyone with access to your private key has full access to your wallet and it's coins, so you should always keep your private keys safe. In the web wallet, your keys are never stored, nor shared; they are used only for the duration that you have the wallet open in a browser and are lost when the browser window or tab is closed. However, you should take additional measures to ensure your keys are safe:</p>
+            <ul>
+                <li>Website: Make sure you are on <code>https://wallet.cruzb.it</code>. An attacker may host a similar looking wallet at a different address to try to trick you. Look closely to make sure you're on the official site. If necessary, type the URL in yourself.</li>
+                <li>Encryption: Ensure your browser displays the site as "secure" (often browsers will display a green lock symbol), and that the SSL certificate is valid.</li>
+                <li>Code: Alternately, you can clone the code repository, and run a "local" copy of the wallet on your own computer.</li>
+            </ul>
+            <p>If you have the technical knowledge, and desire, code review and improvement is encouraged.
+                <br><a href="https://github.com/jstnryan/wallet.cruzb.it">View the code on GitHub.</a></p>
+            <br><br>
+        </div>
+
+
+    </div>
+</body>
+</html>
