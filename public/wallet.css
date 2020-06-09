@@ -92,3 +92,44 @@ table {
 .amt-negative {
     color: red;
 }
+
+/* Tabs */
+input[type=button].tab {
+    color: #FFF;
+    background-color: #185b9d;
+    border-color: #185b9d;
+}
+
+input[type=button].tab:hover {
+    background-color: #259adb;
+    border-color: #259adb;
+    color: #FFF;
+}
+
+input[type=button].tab.tab-selected {
+    background-color: #FFF;
+    border: 1px solid #888;
+    color: #333;
+    cursor: initial;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-active {
+    display: block;
+}
+
+/* Modal Window */
+.modal {
+    max-width: 760px;
+}
+
+.modal pre {
+    margin: 0;
+}
+
+.modal pre code {
+    overflow-x: scroll;
+}

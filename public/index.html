@@ -9,8 +9,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css">
     <link rel="stylesheet" href="https://cruzb.it/css/skeleton.css">
     <link rel="stylesheet" href="https://cruzb.it/css/custom.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.css">
     <link rel="stylesheet" href="wallet.css">
     <script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.1/jquery.modal.min.js"></script><!-- http://jquerymodal.com/ -->
     <script src="lib/nacl-fast.min.js"></script><!-- TweetNaCl (JavaScript): https://tweetnacl.js.org/ -->
     <script src="lib/nacl-util.min.js"></script><!-- https://github.com/dchest/tweetnacl-util-js -->
     <script src="lib/sha3.min.js"></script><!-- https://github.com/emn178/js-sha3 -->
@@ -59,66 +61,110 @@
                 </div>
             </div>
 
-            <div id="wallet-send" class="u-hidden">
-                <h5>Send CRUZ</h5>
-                <div class="row">
-                    <div class="eight columns">
-                        <input class="u-full-width" id="wallet-recipient" type="text" value="" pattern="[A-Za-z0-9/\+]{43}=" title="Recipient address" placeholder="Recipient Address">
+
+            <section id="tabs" class="u-hidden">
+                <hr class="u-threequarter-width">
+
+                <div id="tab-buttons" class="row">
+                    <!--
+                    <div id="tab-button-send-column" class="four columns">
+                        <input class="u-full-width tab u-hidden" id="tab-button-send" type="button" value="Send Cruz">
+                    </div>
+                    --->
+                    <div class="four columns">
+                        <input class="u-full-width tab" id="tab-button-history" type="button" value="Transaction History">
                     </div>
                     <div class="four columns">
-                        <input class="u-full-width" id="wallet-amount" type="number" min="1" step="0.00000001" placeholder="Amount">
+                        <input class="u-full-width tab" id="tab-button-utility" type="button" value="Utilities">
                     </div>
                 </div>
-                <div class="row">
-                    <div class="ten columns">
-                        <input class="u-full-width" id="wallet-memo" type="text" value="" title="Transaction memo" maxlength="100" placeholder="Transaction Memo (optional)">
-                    </div>
-                    <div class="two columns button-combo">
-                        <input class="button-primary button-action-left" id="wallet-submit" type="button" value="Send">
-                        <input class="button-primary button-option-right" id="wallet-option" type="button" value="&#9660;" aria-haspopup="true" aria-expanded="false">
-                        <ul class="button-options" id="wallet-send-options" role="menu">
-                            <li id="option-generate-tx">Generate Transaction</li>
-                            <li id="option-generate-mx">Generate Message</li>
+                <div id="tab-content">
+                    <div class="tab-content" id="tab-content-send">
+                        <h5>Send CRUZ</h5>
+                        <div class="row">
+                            <div class="eight columns">
+                                <input class="u-full-width" id="wallet-recipient" type="text" value="" pattern="[A-Za-z0-9\/\+]{43}=" maxlength="44" title="Recipient address" placeholder="Recipient Address">
+                            </div>
+                            <div class="four columns">
+                                <input class="u-full-width" id="wallet-amount" type="number" min="0.01" step="0.00000001" placeholder="Amount">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="ten columns">
+                                <input class="u-full-width" id="wallet-memo" type="text" value="" title="Transaction memo" maxlength="100" placeholder="Transaction Memo (optional)">
+                            </div>
+                            <div class="two columns button-combo">
+                                <input class="button-primary button-action-left" id="wallet-submit" type="button" value="Send">
+                                <input class="button-primary button-option-right" id="wallet-option" type="button" value="&#9660;" aria-haspopup="true" aria-expanded="false">
+                                <ul class="button-options" id="wallet-send-options" role="menu">
+                                    <li id="option-generate-tx">Generate Transaction</li>
+                                    <li id="option-generate-mx">Generate Message</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <ul>
+                            <li>The standard, minimum fee of 0.01 cruz will automatically be applied to each transaction.</li>
+                            <li>Unconfirmed transactions will expire if not mined within 3 blocks (this is very rare).</li>
                         </ul>
+                        <h5>Pending Transactions</h5>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Sender/Recipient</th>
+                                <th>Amount</th>
+                            </tr>
+                            </thead>
+                            <tbody id="wallet-send-pending">
+                            <tr class="no-results">
+                                <td colspan="3">No pending transactions.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="tab-content" id="tab-content-history">
+                        <h5>Pending Transactions</h5>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Sender/Recipient</th>
+                                <th>Amount</th>
+                            </tr>
+                            </thead>
+                            <tbody id="wallet-transactions-pending">
+                            <tr class="no-results">
+                                <td colspan="3">No pending transactions.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                        <h5>Confirmed Transactions</h5>
+                        <p>Shows the last 10 confirmed transactions associated with this public key.</p>
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Sender/Recipient</th>
+                                <th>Amount</th>
+                            </tr>
+                            </thead>
+                            <tbody id="wallet-transactions-confirmed">
+                            <tr class="no-results">
+                                <td colspan="3">No transactions found.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="tab-content" id="tab-content-utility">
+                        <h5>QR Codes</h5>
+                        <p>QR Codes are scan-able visual representations of wallet addresses which can be used for quickly and easily using addresses in other applications. QR codes for public keys can be freely shared to make transacting easier, however QR codes for private keys should always be kept private.</p>
+                        <p>This feature is currently in development.</p>
+                        <h5>Paper Wallet</h5>
+                        <p>Although not always kept in physical form, a Paper Wallet is a document containing one or more public and private keys, intended to be printed in physical form and kept safe in case it is needed. The security and utility of paper wallets have been disputed. <a href="https://en.bitcoin.it/wiki/Paper_wallet" target="_blank">Read about why you might not want a paper wallet.</a></p>
+                        <p>This feature is currently in development.</p>
                     </div>
                 </div>
-            </div>
-
-            <hr class="u-threequarter-width">
-
-            <div id="wallet-ledger" class="u-hidden">
-                <h5>Pending Transactions</h5>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Transaction ID</th>
-                        <th>Sender/Recipient</th>
-                        <th>Amount</th>
-                    </tr>
-                    </thead>
-                    <tbody id="wallet-transactions-pending">
-                    <tr class="no-results">
-                        <td colspan="3">No pending transactions.</td>
-                    </tr>
-                    </tbody>
-                </table>
-                <h5>Confirmed Transactions</h5>
-                <p>Shows the last 10 confirmed transactions associated with this public key.</p>
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Transaction ID</th>
-                        <th>Sender/Recipient</th>
-                        <th>Amount</th>
-                    </tr>
-                    </thead>
-                    <tbody id="wallet-transactions-confirmed">
-                    <tr class="no-results">
-                        <td colspan="3">No transactions found.</td>
-                    </tr>
-                    </tbody>
-                </table>
-            </div>
+            </section>
         </section>
 
 
@@ -137,6 +183,11 @@
         </div>
 
 
+    </div>
+
+    <div id="modal-code" class="modal">
+        <h6 class="docs-header" id="modal-code-title"></h6>
+        <pre><code id="modal-code-content"></code></pre>
     </div>
 </body>
 </html>

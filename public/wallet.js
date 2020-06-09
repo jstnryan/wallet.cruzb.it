@@ -15,6 +15,7 @@ $(function() {
     const CRUZBITS_PER_CRUZ = 100000000;
     const BLOCKS_UNTIL_NEW_SERIES = 1008;
     const TX_FEE = Math.floor(0.01 * CRUZBITS_PER_CRUZ);
+    const MIN_AMOUNT = Math.floor(0.01 * CRUZBITS_PER_CRUZ);
 
     let ws = undefined;
     let wallet = {
@@ -201,8 +202,10 @@ $(function() {
 
     function populatePendingTransactions(transactions) {
         let pendingElm = $('#wallet-transactions-pending');
+        let pendingSend = $('#wallet-send-pending');
         if (transactions === null || transactions.length < 1) {
             pendingElm.html('<tr class="no-results"><td colspan="3">No pending transactions.</td></tr>');
+            pendingSend.html('<tr class="no-results"><td colspan="3">No pending transactions.</td></tr>');
             return;
         }
 
@@ -228,28 +231,31 @@ $(function() {
             }
         });
         pendingElm.html(pendingHtml);
+        pendingSend.html(pendingHtml);
     }
 
     function addPendingTransaction(transaction) {
         $('#wallet-transactions-pending .no-results').remove();
+        $('#wallet-send-pending .no-results').remove();
         let pendingHtml = '';
-        if (tx.hasOwnProperty('signature')) delete tx.signature;
-        let txId = sha3_256(JSON.stringify(tx));
+        if (transaction.hasOwnProperty('signature')) delete transaction.signature;
+        let txId = sha3_256(JSON.stringify(transaction));
         pendingHtml += '<tr><td><span title="' + txId + '">' + truncateString(txId, 8, 8);
         pendingHtml += '</span></td><td><a href="https://cruzbase.com/#/address/';
-        if (tx.to === nacl.util.encodeBase64(wallet.publicKey)) {
+        if (transaction.to === nacl.util.encodeBase64(wallet.publicKey)) {
             // this is an "incoming" transaction (credit)
             // note that the "from" property can be omitted, but is only relevant for coinbase transactions
             //  which do not appear in FilterTransactionQueue messages
-            pendingHtml += tx.from + '" title="' + tx.from + '">' + tx.from + '</a></td>';
-            pendingHtml += '<td><span class="amt-positive">' + amountInCruz(tx.amount) + '</span></td></tr>';
+            pendingHtml += transaction.from + '" title="' + transaction.from + '">' + transaction.from + '</a></td>';
+            pendingHtml += '<td><span class="amt-positive">' + amountInCruz(transaction.amount) + '</span></td></tr>';
         } else {
             // this is an "outgoing" transaction (debit)
-            pendingHtml += tx.to + '" title="' + tx.to + '">' + tx.to + '</a></td>';
+            pendingHtml += transaction.to + '" title="' + transaction.to + '">' + transaction.to + '</a></td>';
             pendingHtml += '<td><span class="amt-negative">'
-                + amountInCruz(tx.amount + tx.fee) + '</span></td></tr>';
+                + amountInCruz(transaction.amount + transaction.fee) + '</span></td></tr>';
         }
         $('#wallet-transactions-pending').append(pendingHtml);
+        $('#wallet-send-pending').append(pendingHtml);
     }
 
     function populateConfirmedTransactions(transactions) {
@@ -293,18 +299,31 @@ $(function() {
     }
 
     let sectionToggle = function(action = 'open') {
+        $('#intro').addClass('u-hidden');
+
         if (action === 'open') {
-            document.getElementById('wallet-update').classList.add('u-hidden');
-            document.getElementById('wallet-info').classList.remove('u-hidden');
+            $('#wallet-update').addClass('u-hidden');
+            $('#wallet-info').removeClass('u-hidden');
             if (wallet.secretKey !== null) {
-                document.getElementById('wallet-send').classList.remove('u-hidden');
+                $('#tab-buttons DIV').removeClass('six').addClass('four');
+                // yes, this is ugly, but simply hiding the content won't do, because the styles us :first-child
+                $('#tab-buttons').prepend('<div id="tab-button-send-column" class="four columns"><input class="u-full-width tab tab-selected" id="tab-button-send" type="button" value="Send Cruz"></div>');
+                $('#tab-button-send').bind('click', tabHandler);
+                $('#tab-content-send').addClass('tab-active');
+            } else {
+                $('#tab-buttons DIV').removeClass('four').addClass('six');
+                $('#tab-button-send-column').remove();
+                // $('#tab-button-send-column').addClass('u-hidden');
+                $('#tab-button-history').addClass('tab-selected');
+                $('#tab-content-history').addClass('tab-active');
             }
-            document.getElementById('wallet-ledger').classList.remove('u-hidden');
+            $('#tabs').removeClass('u-hidden');
         } else {
-            document.getElementById('wallet-info').classList.add('u-hidden');
-            document.getElementById('wallet-send').classList.add('u-hidden');
-            document.getElementById('wallet-ledger').classList.add('u-hidden');
-            document.getElementById('wallet-update').classList.remove('u-hidden');
+            $('#tabs').addClass('u-hidden');
+            $('.tab').removeClass('tab-selected');
+            $('.tab-content').removeClass('tab-active');
+            $('#wallet-info').addClass('u-hidden');
+            $('#wallet-update').removeClass('u-hidden');
         }
     }
 
@@ -351,20 +370,8 @@ $(function() {
 
     // generate and send transaction
     $('#wallet-submit').on('click', function(e) {
-        // some checks
-        let elmAmount = $('#wallet-amount');
-        let amount = parseFloat(elmAmount.val());
-        if (amount < 1 || elmAmount.is(':invalid')) {
-            alert("Please input a valid bet amount.");
-            elmAmount.focus();
-            return;
-        }
-        // create the transaction
-        let transaction = generateSignedTransaction(
-            $('#wallet-recipient').val(),
-            amount,
-            $('#wallet-memo').val()
-        );
+        let transaction = getTransactionObject();
+        if (transaction === null) return;
         // send it
         socketSend(
             "push_transaction",
@@ -391,46 +398,26 @@ $(function() {
 
     // generate and display transaction JSON, don't send transaction
     $('#option-generate-tx').on('click', function(e) {
-        // some checks
-        let elmAmount = $('#wallet-amount');
-        let amount = parseFloat(elmAmount.val());
-        if (amount < 1 || elmAmount.is(':invalid')) {
-            alert("Please input a valid bet amount.");
-            elmAmount.focus();
-            return;
-        }
-        // create the transaction
-        let transaction = generateSignedTransaction(
-            $('#wallet-recipient').val(),
-            amount,
-            $('#wallet-memo').val()
-        );
-        alert(JSON.stringify(transaction));
+        let transaction = getTransactionObject();
+        if (transaction === null) return;
+        $('#modal-code-title').html('Transaction JSON');
+        $('#modal-code-content').html(JSON.stringify(transaction, null, 4));
+        $('#modal-code').modal();
     });
 
     // generate and display push_transaction_message, don't send transaction
     $('#option-generate-mx').on('click', function(e) {
-        // some checks
-        let elmAmount = $('#wallet-amount');
-        let amount = parseFloat(elmAmount.val());
-        if (amount < 1 || elmAmount.is(':invalid')) {
-            alert("Please input a valid bet amount.");
-            elmAmount.focus();
-            return;
-        }
-        // create the transaction
-        let transaction = generateSignedTransaction(
-            $('#wallet-recipient').val(),
-            amount,
-            $('#wallet-memo').val()
-        );
+        let transaction = getTransactionObject();
+        if (transaction === null) return;
         let message = {
             'type': 'push_transaction',
             'body': {
                 transaction: transaction
             }
         };
-        alert(JSON.stringify(message));
+        $('#modal-code-title').html('Push_Transaction Message');
+        $('#modal-code-content').html(JSON.stringify(message, null, 4));
+        $('#modal-code').modal();
     });
 
     /** ************************************************************************************************************* */
@@ -444,6 +431,59 @@ $(function() {
         return amount * CRUZBITS_PER_CRUZ;
     }
 
+    // helper method, since this process of checking values and
+    //  retrieving the transaction object is reused
+    function getTransactionObject() {
+        // some checks
+        let elmAmount = $('#wallet-amount');
+        let amount = parseFloat(elmAmount.val());
+        if (elmAmount.is(':invalid') || !checkTransactionAmount(amount)) {
+            alert("Please input a valid transaction amount.");
+            elmAmount.focus();
+            return null;
+        }
+        if (!checkTransactionBalance(amount)) {
+            alert("This wallet has insufficient balance to send this amount (minimum transaction fee is 0.01 cruz).");
+            elmAmount.focus();
+            return null;
+        }
+        let elmRecipient = $('#wallet-recipient');
+        let recipient = elmRecipient.val();
+        if (!checkTransactionRecipient(recipient)) {
+            alert("Please input a valid recipient public key.");
+            elmRecipient.focus();
+            return null;
+        }
+        let elmMemo = $('#wallet-memo');
+        let memo = elmMemo.val();
+        if (!checkTransactionMemo(memo)) {
+            alert("Memo field must be a max of 100 characters, or blank.");
+            elmMemo.focus();
+            return null;
+        }
+
+        // create the transaction
+        return generateSignedTransaction(recipient, amount, memo);
+    }
+
+    // perform various checks on transaction fields before attempting to generate
+    function checkTransactionRecipient(recipient) {
+        return new RegExp("[A-Za-z0-9\/\+]{43}=").test(recipient);
+    }
+
+    function checkTransactionAmount(amount) {
+        return (amount >= (MIN_AMOUNT / CRUZBITS_PER_CRUZ) && amount !== null);
+    }
+
+    function checkTransactionBalance(amount) {
+        return parseFloat($('#wallet-balance').val()) >= (amount + (TX_FEE / CRUZBITS_PER_CRUZ));
+    }
+
+    function checkTransactionMemo(memo) {
+        return memo.length <= 100;
+    }
+
+    // create a properly-formed transaction object, sign the transaction
     function generateSignedTransaction(recipient, amount, memo) {
         let transaction = {
             time: Math.floor(Date.now() / 1000),
@@ -456,6 +496,15 @@ $(function() {
             expires: parseInt(tip_height) + 3, // must be mined within the next 3 blocks
             series: Math.floor(tip_height / BLOCKS_UNTIL_NEW_SERIES) + 1,
         };
+        // remove empty optional fields
+        // - in the web wallet, only the "memo" field will ever be applicable here,
+        //   but this is included as as example of conforming to the protocol
+        let optionalFields = ['from', 'fee', 'memo', 'matures', 'expires', 'signature'];
+        optionalFields.forEach(function(f) {
+            if (!transaction[f]) {
+                delete transaction[f];
+            }
+        })
         // compute the hash
         let tx_hash = sha3_256(JSON.stringify(transaction));
         // sign it
@@ -475,9 +524,24 @@ $(function() {
     }
 
     /** ************************************************************************************************************* */
+    /** Tab Control ************************************************************************************************* */
+
+    let tabHandler = function(e) {
+        // switch tab content
+        $('.tab-content').removeClass('tab-active');
+        let target = $(this).attr('id').replace(/button/, 'content');
+        $('#' + target).addClass('tab-active');
+        // switch tab buttons
+        $('.tab').removeClass('tab-selected');
+        $(this).addClass('tab-selected');
+    };
+
+    $('.tab').on('click', tabHandler);
+
+    /** ************************************************************************************************************* */
     /** document.ready Actions ************************************************************************************** */
 
-   socketCreate();
+  socketCreate();
 
     /** ************************************************************************************************************* */
     /** Debugging *************************************************************************************************** */
